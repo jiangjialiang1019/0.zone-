@@ -20,9 +20,6 @@
 
 使用方法：
 1、按照格式编辑公司目录：
-企业名称	曾用名	简称或其他品牌关键词	移动应用	域名	邮箱	信息系统	代码和文档
-北京零零信安科技有限公司	-	-	-	-	-	-	-
-四川零零信安科技有限公司	-	-	-	-	-	-	-
 ![image](https://github.com/user-attachments/assets/cc1a90f1-c167-4db3-b210-bb655f5db803)
 
 设置关键差数：my_key="d8dc137676xxxxxxe794ef8e17dc8c"

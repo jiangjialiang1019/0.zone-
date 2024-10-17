@@ -47,11 +47,11 @@ def input_xlsx(have_data,path_file):
 
 ####从0zone的api里获取数据
 def data_api_by_0zone(next=0,query_type="site",query="",size=100):
-    my_kye="d8dc137676b66d23d8e794ef8e17dc8c"
+    my_0zone_key="d8dc137676b66d23d8e794ef8e17dc8c"
     headers = {'Content-Type': 'application/json'}
     url="https://0.zone/api/data/"
     time.sleep(1)
-    payload=json.dumps({"query_type":query_type, "query":query, "next":next, "pagesize":size, "zone_key_id":my_kye, "zb_pay": 1 })
+    payload=json.dumps({"query_type":query_type, "query":query, "next":next, "pagesize":size, "zone_key_id":my_0zone_key, "zb_pay": 1 })
     response = requests.request("post", url, headers=headers, data=payload,verify=False).json()
 
     return response

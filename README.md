@@ -33,8 +33,8 @@
 
 ![image](https://github.com/user-attachments/assets/cc1a90f1-c167-4db3-b210-bb655f5db803)
 
-设置关键差数：my_key="d8dc137676xxxxxxe794ef8e17dc8c"
-my_key 异步0.zone获取：https://0.zone/plug-in-unit
+设置关键差数：my_0zone_key="d8dc137676xxxxxxe794ef8e17dc8c"
+my_0zone_key 异步0.zone获取：https://0.zone/plug-in-unit
 
 
 org_file='公司目录.xlsx' #公司目录名称

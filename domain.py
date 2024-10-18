@@ -1,8 +1,3 @@
-from multiprocessing import Process
-from elasticsearch import Elasticsearch
-from elasticsearch import helpers
-import re
-import datetime
 import hashlib
 import warnings
 warnings.filterwarnings("ignore")

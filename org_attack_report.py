@@ -1,13 +1,14 @@
-import xlrd
 import re
 import os
 import openpyxl
+import xlrd
 import requests
 import time
+import datetime
 import json
 import warnings
 warnings.filterwarnings("ignore")
-
+from domain import url_analysis
 
 def remove_control_chars(s):  
     control_chars = ''.join(chr(i) for i in range(0, 32))  # 创建包含所有控制字符的字符串  
@@ -47,7 +48,9 @@ def input_xlsx(have_data,path_file):
 
 ####从0zone的api里获取数据
 def data_api_by_0zone(next=0,query_type="site",query="",size=100):
-    my_0zone_key="d8dc137676b66d23d8e794ef8e17dc8c"
+    global my_0zone_key
+    if my_0zone_key=="":
+        print("请预设0.zone的api_key，请前往：https://0.zone/plug-in-unit 获取。")
     headers = {'Content-Type': 'application/json'}
     url="https://0.zone/api/data/"
     time.sleep(1)
@@ -60,7 +63,7 @@ def data_api_by_0zone(next=0,query_type="site",query="",size=100):
 def retrieve_data(keylist,query_type,query_str):
     have_data=[]
     max_num=100
-    response=data_api_by_0zone(0,query_type,query_str)
+    response=data_api_by_0zone(0,query_type,query_str,max_num)
     
     all_hits_total=int(response['total'])
 
@@ -71,13 +74,13 @@ def retrieve_data(keylist,query_type,query_str):
     while len(all_results) > 0:
         last_sort_value = response['next']
 
-        o_index=0
         for i in all_results:
             data_i=i
             csv_li=[]
             for k in keylist:
                 key_vlue=""
                 key_vlue_str=""
+
                 if "." not in k:
                     if k in data_i:
                         key_vlue=data_i[k]
@@ -108,7 +111,7 @@ def retrieve_data(keylist,query_type,query_str):
 
         
         if len(all_results)==max_num and all_hits_total>max_num:
-            response=data_api_by_0zone(last_sort_value,query_type,query_str)
+            response=data_api_by_0zone(last_sort_value,query_type,query_str,max_num)
             all_results = response['data']
         else:
             all_results=[]
@@ -116,6 +119,76 @@ def retrieve_data(keylist,query_type,query_str):
 
 
     return have_data
+
+
+
+#####获取 darknet 数据
+def darknet_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
+    
+    query_type="darknet"
+    have_data=[]
+    have_data_duibi=[]
+    keylist=[
+        "title","url","tags","source","event","msg.description","msg.release_time","msg.author","detail_parsing.telegram_list"
+    ]
+    keylist_name=[
+        "网页标题","地址","标签","来源","事件类型","网页描述（自动翻译）","内容发布时间","发布者","原文包含的TG","关键词"
+    ]
+    have_data.append(keylist_name)
+    for i in company_name:
+        query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
+        have_data_li=retrieve_data(keylist,query_type,query_str)
+        for h in have_data_li:
+            input_i=h
+            if h not in have_data_duibi:
+                have_data_duibi.append(i)
+                input_i.append(i)
+                if input_i not in have_data:
+                    have_data.append(input_i)
+
+    print("暗网：完成品牌关键词查询")
+    for i in domain_list:
+        if "0.zone" not in i:
+            query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
+            
+            have_data_li=retrieve_data(keylist,query_type,query_str)
+            for h in have_data_li:
+                input_i=h
+                if h not in have_data_duibi:
+                    have_data_duibi.append(i)
+                    input_i.append(i)
+                    if input_i not in have_data:
+                        have_data.append(input_i)
+    print("暗网：完成域名关键词查询")
+
+    for i in app_list:
+        query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
+        have_data_li=retrieve_data(keylist,query_type,query_str)
+        for h in have_data_li:
+            input_i=h
+            if h not in have_data_duibi:
+                have_data_duibi.append(i)
+                input_i.append(i)
+                if input_i not in have_data:
+                    have_data.append(input_i)
+    print("暗网：完成移动应用关键词查询")
+                    
+    for i in ip_list:
+        if i!="" and  "0.zone" not in i:
+            query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
+            have_data_li=retrieve_data(keylist,query_type,query_str)
+            for h in have_data_li:
+                input_i=h
+                if h not in have_data_duibi:
+                    have_data_duibi.append(i)
+                    input_i.append(i)
+                    if input_i not in have_data:
+                        have_data.append(input_i)
+    print("暗网：完成信息系统关键词查询")
+
+    input_xlsx(have_data,new_file)
+    return len(have_data)-1
+
 
 
 #####获取代码和文档数据
@@ -131,8 +204,10 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
         "文档","地址","类型","来源","标签","后缀","原文包含的域名","原文包含的邮箱","原文包含的IP","关键词"
     ]
     have_data.append(keylist_name)
+    day_30=datetime.datetime.now()-datetime.timedelta(days=30)
+    day_30=str(day_30)[0:10]
     for i in company_name:
-        query_str="code_detail=="+str(i)+"||repository.description=="+str(i)
+        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
             input_i=h
@@ -141,10 +216,11 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
                 input_i.append(i)
                 if input_i not in have_data:
                     have_data.append(input_i)
+    print("代码：完成品牌关键词查询")
 
 
     for i in domain_list:
-        query_str="code_detail=="+str(i)+"||repository.description=="+str(i)
+        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
         
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
@@ -154,9 +230,10 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
                 input_i.append(i)
                 if input_i not in have_data:
                     have_data.append(input_i)
+    print("代码：完成域名关键词查询")
 
     for i in app_list:
-        query_str="code_detail=="+str(i)+"||repository.description=="+str(i)
+        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
             input_i=h
@@ -165,10 +242,11 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
                 input_i.append(i)
                 if input_i not in have_data:
                     have_data.append(input_i)
+    print("代码：完成移动应用关键词查询")
                     
     for i in ip_list:
         if i!="":
-            query_str="code_detail=="+str(i)+"||repository.description=="+str(i)
+            query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
             have_data_li=retrieve_data(keylist,query_type,query_str)
             for h in have_data_li:
                 input_i=h
@@ -177,8 +255,8 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
                     input_i.append(i)
                     if input_i not in have_data:
                         have_data.append(input_i)
+    print("代码：完成信息系统关键词查询")
 
-    
     input_xlsx(have_data,new_file)
     return len(have_data)-1
     
@@ -329,10 +407,15 @@ def domain_s_mapping(company_name,new_file):
     for i in have_data_li:
         if i not in have_data:
             have_data.append(i)
-        new_key=i[0]
-        if new_key not in keyword_list:
-            if "domain"!=new_key and new_key[-1]!=".":
-                keyword_list.append(new_key)
+        new_key=i[1]
+        root_domain=""
+        url_res=url_analysis(new_key)
+        if url_res["code"]=="200":
+            root_domain=url_res["root_domain"]
+            if root_domain not in keyword_list:
+                if "domain"!=new_key and new_key[-1]!=".":
+                    keyword_list.append(new_key)
+
 
     input_xlsx(have_data,new_file)
     ctx["domain_list"]=keyword_list
@@ -447,7 +530,16 @@ def reda_xlsx_001(org_file,save_file):
                 code_num=code_s_mapping(company_name_list,new_file,app_list,domain_list,ip_res["ip_list"])
                 worksheet.cell(1,8,str("代码和文档"))
                 worksheet.cell(i+1,8,str(code_num))
-                print(company_name,"信息系统",code_num)
+                print(company_name,"代码和文档",code_num)
+                
+
+                new_file=juedui+"/暗网情报.xlsx"
+                code_num=darknet_s_mapping(company_name_list,new_file,app_list,domain_list,ip_res["ip_list"])
+                worksheet.cell(1,9,str("暗网情报"))
+                worksheet.cell(i+1,9,str(code_num))
+                print(company_name,"暗网情报",code_num)
+
+
 
 
                 workbook.save(filename=url)
@@ -460,4 +552,5 @@ def reda_xlsx_001(org_file,save_file):
 ###组织目标内容
 org_file='公司目录.xlsx'
 save_file="测试文件夹"
+my_0zone_key='1d81facd5bef258edcf40bf306829053'####0.zone的APIKEY
 reda_xlsx_001(org_file,save_file)

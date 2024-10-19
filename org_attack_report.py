@@ -1,7 +1,6 @@
 import re
 import os
 import openpyxl
-import xlrd
 import requests
 import time
 import datetime
@@ -17,14 +16,37 @@ def remove_control_chars(s):
 
 ###保存查询到的内容到表格中
 def input_xlsx(have_data,path_file):
-    url=path_file
+    global one_table_file
+    global save_file
+    #file_msg={"company":company_name,"data_type":"移动应用","which_page":0}
+    which_page=0
+    if one_table_file=="yes":###用一个表格文件
+        url=save_file+"/"+path_file["company"]+".xlsx"
+        which_page=path_file["which_page"]
+    else:
+        file_path = save_file+'/'+path_file["company"] # 文件夹路径
+        if os.path.exists(file_path):
+            pass
+        else:
+            print('文件夹不存在',file_path)
+            os.makedirs(file_path, exist_ok=True)
+
+        url=path_file+"/"+path_file["data_type"]+".xlsx"
     try:
         workbook=openpyxl.load_workbook(url)
+        sheet_names = workbook.sheetnames
+
     except:
         wb = openpyxl.Workbook()
         wb.save(url)
         workbook=openpyxl.load_workbook(url)
-    worksheet=workbook.worksheets[0]
+
+    number_of_sheets = len(sheet_names)
+    for i in range(which_page+1-number_of_sheets):
+        workbook.create_sheet()
+
+    worksheet=workbook.worksheets[which_page]
+    worksheet.title = path_file["data_type"]
     hang=0
     for i in have_data:
         hang=hang+1
@@ -49,12 +71,19 @@ def input_xlsx(have_data,path_file):
 ####从0zone的api里获取数据
 def data_api_by_0zone(next=0,query_type="site",query="",size=100):
     global my_0zone_key
+    global automatic_payment
     if my_0zone_key=="":
         print("请预设0.zone的api_key，请前往：https://0.zone/plug-in-unit 获取。")
+
+    if automatic_payment=="yes":###判断是否自动扣费
+        zb_pay=1
+    else:
+        zb_pay=0
+
     headers = {'Content-Type': 'application/json'}
     url="https://0.zone/api/data/"
     time.sleep(1)
-    payload=json.dumps({"query_type":query_type, "query":query, "next":next, "pagesize":size, "zone_key_id":my_0zone_key, "zb_pay": 1 })
+    payload=json.dumps({"query_type":query_type, "query":query, "next":next, "pagesize":size, "zone_key_id":my_0zone_key, "zb_pay": zb_pay })
     code=1
     while code!=0:
         try:
@@ -521,96 +550,92 @@ def email_s_mapping(company_name,new_file,domain_list):
 
 
 
-def reda_xlsx_001(org_file,save_file):
-    url = org_file
-    workbook = xlrd.open_workbook(url)
+def reda_xlsx_001(org_file):
+    workbook = openpyxl.load_workbook(org_file) 
     lei_num=0
     sheet_i=0
         
-    for sheet1 in workbook.sheets():
-        title=sheet1.name
-        print(title)
-        company = sheet1.col_values(0) # 
-        key = sheet1.col_values(1) # 
+    for sheet in workbook.worksheets:
+        sheet_title=sheet.title
+        print(sheet_title)
 
+        first_column_values = []
+        for row in sheet.iter_rows(min_row=1,values_only=True):
+            first_column_values.append(list(row))
         
-        leni=len(company)
-
-        for i in range(leni):
-            if i>0:
-                company_name=company[i]
-                old_company_name=key[i]
+        worksheet=workbook[sheet_title]
+        worksheet.cell(1,4,str("移动应用"))
+        worksheet.cell(1,5,str("域名"))
+        worksheet.cell(1,6,str("邮箱"))
+        worksheet.cell(1,7,str("信息系统"))
+        worksheet.cell(1,8,str("代码和文档"))
+        worksheet.cell(1,9,str("暗网情报"))
+        for i in first_column_values:
+            if lei_num>0:
+                company_name=i[0]
+                old_company_name=i[1]
                 company_name_list=[]
                 company_name_list.append(company_name)
                 if old_company_name!="-" and len(old_company_name)>1:
                     company_name_list.append(company_name)
 
-                juedui = 'data/'+save_file+'/'+company_name # 文件夹路径
-
-                if os.path.exists(juedui):
-                    juedui=juedui
-                else:
-                    print('文件夹不存在',juedui)
-                    os.makedirs(juedui, exist_ok=True)
 
                 ##记录任务执行情况，可用统计反馈
-                workbook=openpyxl.load_workbook(url)
-                worksheet=workbook.worksheets[sheet_i]
-                
-                new_file=juedui+"/移动应用.xlsx"
-                app_list=app_s_mapping(company_name_list,new_file)
-                worksheet.cell(1,4,str("移动应用"))
-                worksheet.cell(i+1,4,str(len(app_list)))
+                # workbook_now=openpyxl.load_workbook(org_file)
+                file_msg={"company":company_name,"data_type":"移动应用","which_page":0}
+                app_list=app_s_mapping(company_name_list,file_msg)
+                worksheet.cell(lei_num+1,4,str(len(app_list)))
                 print(company_name,"移动应用",str(len(app_list)))
+                workbook.save(filename=org_file)
 
                 
-                new_file=juedui+"/域名.xlsx"
-                domain_res=domain_s_mapping(company_name_list,new_file)
+                file_msg={"company":company_name,"data_type":"域名","which_page":1}
+                domain_res=domain_s_mapping(company_name_list,file_msg)
                 domain_list=domain_res["domain_list"]
-                worksheet.cell(1,5,str("域名"))
-                worksheet.cell(i+1,5,str(domain_res["num"]))
+                worksheet.cell(lei_num+1,5,str(domain_res["num"]))
                 print(company_name,"域名",domain_res["num"])
+                workbook.save(filename=org_file)
 
 
-                new_file=juedui+"/邮件.xlsx"
-                email_num=email_s_mapping(company_name_list,new_file,domain_list)
-                worksheet.cell(1,6,str("邮箱"))
-                worksheet.cell(i+1,6,str(email_num))
+                file_msg={"company":company_name,"data_type":"邮箱","which_page":2}
+                email_num=email_s_mapping(company_name_list,file_msg,domain_list)
+                worksheet.cell(lei_num+1,6,str(email_num))
                 print(company_name,"邮箱",email_num)
+                workbook.save(filename=org_file)
 
 
-                new_file=juedui+"/信息系统.xlsx"
-                ip_res=site_s_mapping(company_name_list,new_file,app_list,domain_list)
-                worksheet.cell(1,7,str("信息系统"))
-                worksheet.cell(i+1,7,str(ip_res["num"]))
+                file_msg={"company":company_name,"data_type":"信息系统","which_page":3}
+                ip_res=site_s_mapping(company_name_list,file_msg,app_list,domain_list)
+                worksheet.cell(lei_num+1,7,str(ip_res["num"]))
                 print(company_name,"信息系统",ip_res["num"])
+                workbook.save(filename=org_file)
                 
 
-                new_file=juedui+"/代码和文档.xlsx"
-                code_num=code_s_mapping(company_name_list,new_file,app_list,domain_list,ip_res["ip_list"])
-                worksheet.cell(1,8,str("代码和文档"))
-                worksheet.cell(i+1,8,str(code_num))
+                file_msg={"company":company_name,"data_type":"代码和文档","which_page":4}
+                code_num=code_s_mapping(company_name_list,file_msg,app_list,domain_list,ip_res["ip_list"])
+                worksheet.cell(lei_num+1,8,str(code_num))
                 print(company_name,"代码和文档",code_num)
+                workbook.save(filename=org_file)
                 
-
-                new_file=juedui+"/暗网情报.xlsx"
-                code_num=darknet_s_mapping(company_name_list,new_file,app_list,domain_list,ip_res["ip_list"])
-                worksheet.cell(1,9,str("暗网情报"))
-                worksheet.cell(i+1,9,str(code_num))
+                file_msg={"company":company_name,"data_type":"暗网情报","which_page":5}
+                code_num=darknet_s_mapping(company_name_list,file_msg,app_list,domain_list,ip_res["ip_list"])
+                worksheet.cell(lei_num+1,9,str(code_num))
                 print(company_name,"暗网情报",code_num)
 
-
-
-
-                workbook.save(filename=url)
-
+                workbook.save(filename=org_file)
                 print("==========================完成一个目标=============================")
+            lei_num=lei_num+1
+            
 
 
         sheet_i=sheet_i+1###进入下一个页签的光标
 
-###组织目标内容
-org_file='公司目录.xlsx'
-save_file="测试文件夹"
-my_0zone_key='1d81facd5bef258edcf4xxx0bf306829053'####0.zone的APIKEY
-reda_xlsx_001(org_file,save_file)
+#####配置参数
+org_file='公司目录.xlsx'###组织目标内容
+save_file="data/测试文件夹"###生成文档保存路径
+my_0zone_key='14ed9e84812fd8b8a1248bdb18e3008b'####0.zone的APIKEY
+automatic_payment="yes" ####api次数不够时自动消费z币。no不消费，yes消费
+one_table_file="yes" ####yes 整体数据使用一个表格文件，no，每个数据类型使用一个表格文件
+
+
+reda_xlsx_001(org_file)

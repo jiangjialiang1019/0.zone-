@@ -43,7 +43,7 @@ def input_xlsx(have_data,path_file):
 
             worksheet.cell(hang,lie,s_clean)
     workbook.save(filename=url)
-    print("结束保存",path_file)
+    # print("结束保存",path_file)
 
 
 ####从0zone的api里获取数据
@@ -55,14 +55,23 @@ def data_api_by_0zone(next=0,query_type="site",query="",size=100):
     url="https://0.zone/api/data/"
     time.sleep(1)
     payload=json.dumps({"query_type":query_type, "query":query, "next":next, "pagesize":size, "zone_key_id":my_0zone_key, "zb_pay": 1 })
-    response = requests.request("post", url, headers=headers, data=payload,verify=False).json()
-
+    code=1
+    while code!=0:
+        try:
+            response = requests.request("post", url, headers=headers, data=payload,verify=False).json()
+            code=response["code"]
+            if code!=0:
+                print(response)
+        except:
+            print("网络请求异常")
     return response
 
 ###通过对应数据类型获取数据
 def retrieve_data(keylist,query_type,query_str):
     have_data=[]
     max_num=100
+
+    
     response=data_api_by_0zone(0,query_type,query_str,max_num)
     
     all_hits_total=int(response['total'])
@@ -70,7 +79,7 @@ def retrieve_data(keylist,query_type,query_str):
     all_results = response['data']
     
 
-
+    print(datetime.datetime.now(),all_hits_total,"开始：",query_type,query_str,"      \r", end="")
     while len(all_results) > 0:
         last_sort_value = response['next']
 
@@ -108,7 +117,8 @@ def retrieve_data(keylist,query_type,query_str):
 
             if csv_li not in have_data:
                 have_data.append(csv_li)
-
+            
+        print(datetime.datetime.now(),str((len(have_data)/all_hits_total)*100)[0:5]+"%","开始：",query_type,query_str,"\r", end="")
         
         if len(all_results)==max_num and all_hits_total>max_num:
             response=data_api_by_0zone(last_sort_value,query_type,query_str,max_num)
@@ -138,6 +148,7 @@ def darknet_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
     for i in company_name:
         query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
         have_data_li=retrieve_data(keylist,query_type,query_str)
+        print(query_str,"\r", end="")
         for h in have_data_li:
             input_i=h
             if h not in have_data_duibi:
@@ -152,6 +163,7 @@ def darknet_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
             query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
             
             have_data_li=retrieve_data(keylist,query_type,query_str)
+            print(query_str,"\r", end="")
             for h in have_data_li:
                 input_i=h
                 if h not in have_data_duibi:
@@ -164,6 +176,7 @@ def darknet_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
     for i in app_list:
         query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
         have_data_li=retrieve_data(keylist,query_type,query_str)
+        print(query_str,"\r", end="")
         for h in have_data_li:
             input_i=h
             if h not in have_data_duibi:
@@ -177,6 +190,7 @@ def darknet_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
         if i!="" and  "0.zone" not in i:
             query_str="(body=="+str(i)+"||description=="+str(i)+"||title=="+str(i)+")&&hot=2"
             have_data_li=retrieve_data(keylist,query_type,query_str)
+            print(query_str,"\r", end="")
             for h in have_data_li:
                 input_i=h
                 if h not in have_data_duibi:
@@ -207,8 +221,9 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
     day_30=datetime.datetime.now()-datetime.timedelta(days=30)
     day_30=str(day_30)[0:10]
     for i in company_name:
-        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
+        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&tags==!爬虫&&timestamp>="+day_30
         have_data_li=retrieve_data(keylist,query_type,query_str)
+        print(query_str,"\r", end="")
         for h in have_data_li:
             input_i=h
             if h not in have_data_duibi:
@@ -220,7 +235,7 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
 
 
     for i in domain_list:
-        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
+        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&tags==!爬虫&&timestamp>="+day_30
         
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
@@ -233,7 +248,7 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
     print("代码：完成域名关键词查询")
 
     for i in app_list:
-        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
+        query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&tags==!爬虫&&timestamp>="+day_30
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
             input_i=h
@@ -243,10 +258,19 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
                 if input_i not in have_data:
                     have_data.append(input_i)
     print("代码：完成移动应用关键词查询")
-                    
+    ip_lei=0
+    query_str=""
+    keylist_i=[]
     for i in ip_list:
-        if i!="":
-            query_str="(code_detail=="+str(i)+"||repository.description=="+str(i)+")&&timestamp>="+day_30
+        ip_lei=ip_lei+1
+        if query_str=="":
+            query_str="code_detail=="+str(i)+"||repository.description=="+str(i)
+        else:
+            query_str=query_str+"||"+"code_detail=="+str(i)+"||repository.description=="+str(i)
+        
+        keylist_i.append(i)
+        if ip_lei%20==0:
+            query_str="("+query_str+str(i)+")&&tags==!爬虫&&timestamp>="+day_30
             have_data_li=retrieve_data(keylist,query_type,query_str)
             for h in have_data_li:
                 input_i=h
@@ -255,6 +279,21 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
                     input_i.append(i)
                     if input_i not in have_data:
                         have_data.append(input_i)
+            query_str=""
+            keylist_i=[]
+        
+    if query_str=="":
+        query_str="("+query_str+str(i)+")&&timestamp>="+day_30
+        have_data_li=retrieve_data(keylist,query_type,query_str)
+        for h in have_data_li:
+            input_i=h
+            if h not in have_data_duibi:
+                have_data_duibi.append(i)
+                input_i.append(i)
+                if input_i not in have_data:
+                    have_data.append(input_i)
+        query_str=""
+    
     print("代码：完成信息系统关键词查询")
 
     input_xlsx(have_data,new_file)
@@ -272,27 +311,29 @@ def site_s_mapping(company_name,new_file,app_list,domain_list):
     have_data_duibi=[]
     have_data=[]
     keylist=[
-        "url","ip","port","title","company","country","city","os","tags","service","status_code"
+        "url","ip","port","title","company","country","city","os","tags","service","status_code","device_type","explore_timestamp","timestamp"
     ]
     keylist_name=[
-        "URL","IP","端口","网页标题","所属公司","国家","城市","操作系统","标签","服务","网络请求状态码","关键词"
+        "URL","IP","端口","网页标题","所属公司","国家","城市","操作系统","标签","服务","网络请求状态码","设备类型","发现时间","更新时间","关键词"
     ]
     have_data.append(keylist_name)
 
 
     for i in company_name:
         query_str="company="+str(i)
-
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
             url_str=h[0]
-            ip_str=re.split(r'[:]+',h[1])[0]
+            ip_str=h[1]
             input_i=h
+            
+            url_res=url_analysis(url_str)
+            if url_res["code"]=="200":
+                root_domain=url_res["root_domain"]
+                if root_domain not in ip_list and root_domain!="":
+                    ip_list.append(root_domain)
 
-            if url_str not in ip_list:
-                ip_list.append(url_str)
-
-            if ip_str not in ip_list:
+            if ip_str not in ip_list and len(ip_str)>6:
                 ip_list.append(ip_str)
 
             if h not in have_data_duibi:
@@ -368,10 +409,26 @@ def app_s_mapping(company_name,new_file):
     for i in have_data_li:
         if i not in have_data:
             have_data.append(i)
-        new_key=i[0]
-        if new_key not in keyword_list:
-            if "title"!=new_key:
-                keyword_list.append(new_key)
+        brand_key=i[0]
+        brand_key=brand_key.replace(".", "", 999)
+        brand_key=brand_key.replace("1", "", 999)
+        brand_key=brand_key.replace("2", "", 999)
+        brand_key=brand_key.replace("3", "", 999)
+        brand_key=brand_key.replace("4", "", 999)
+        brand_key=brand_key.replace("5", "", 999)
+        brand_key=brand_key.replace("6", "", 999)
+        brand_key=brand_key.replace("7", "", 999)
+        brand_key=brand_key.replace("8", "", 999)
+        brand_key=brand_key.replace("9", "", 999)
+        brand_key=brand_key.replace("0", "", 999)
+        brand_key=brand_key.replace("。", "", 999)
+        brand_key=brand_key.replace("⊙", "", 999)
+        brand_key=brand_key.replace("®", "", 999)
+        brand_key=brand_key.replace("⑧", "", 999)
+
+        if brand_key not in keyword_list:
+            if "title"!=brand_key:
+                keyword_list.append(brand_key)
 
     input_xlsx(have_data,new_file)
     return keyword_list
@@ -413,8 +470,11 @@ def domain_s_mapping(company_name,new_file):
         if url_res["code"]=="200":
             root_domain=url_res["root_domain"]
             if root_domain not in keyword_list:
-                if "domain"!=new_key and new_key[-1]!=".":
-                    keyword_list.append(new_key)
+                if "domain"!=root_domain and root_domain[-1]!=".":
+                    keyword_list.append(root_domain)
+                    print(root_domain)
+        else:
+            print("异常URL：",new_key)
 
 
     input_xlsx(have_data,new_file)
@@ -552,5 +612,5 @@ def reda_xlsx_001(org_file,save_file):
 ###组织目标内容
 org_file='公司目录.xlsx'
 save_file="测试文件夹"
-my_0zone_key='1d81facd5bef258edcf40bf306829053'####0.zone的APIKEY
+my_0zone_key='1d81facd5bef258edcf4xxx0bf306829053'####0.zone的APIKEY
 reda_xlsx_001(org_file,save_file)

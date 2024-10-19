@@ -31,16 +31,16 @@ def input_xlsx(have_data,path_file):
             print('文件夹不存在',file_path)
             os.makedirs(file_path, exist_ok=True)
 
-        url=path_file+"/"+path_file["data_type"]+".xlsx"
+        url=file_path+"/"+path_file["data_type"]+".xlsx"
     try:
         workbook=openpyxl.load_workbook(url)
-        sheet_names = workbook.sheetnames
 
     except:
         wb = openpyxl.Workbook()
         wb.save(url)
         workbook=openpyxl.load_workbook(url)
 
+    sheet_names = workbook.sheetnames
     number_of_sheets = len(sheet_names)
     for i in range(which_page+1-number_of_sheets):
         workbook.create_sheet()
@@ -634,8 +634,8 @@ def reda_xlsx_001(org_file):
 org_file='公司目录.xlsx'###组织目标内容
 save_file="data/测试文件夹"###生成文档保存路径
 my_0zone_key='14ed9e84812fd8b8a1248bdb18e3008b'####0.zone的APIKEY
-automatic_payment="yes" ####api次数不够时自动消费z币。no不消费，yes消费
-one_table_file="yes" ####yes 整体数据使用一个表格文件，no，每个数据类型使用一个表格文件
+automatic_payment="yes" ####api次数不够时自动消费z币，no不消费，yes消费
+one_table_file="no" ####yes 整体数据使用一个表格文件，no，每个数据类型使用一个表格文件
 
 
 reda_xlsx_001(org_file)

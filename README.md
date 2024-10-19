@@ -41,9 +41,16 @@ my_0zone_key="d8dc137676xxxxxxe794ef8e17dc8c"
 
 my_0zone_key 异步0.zone获取：https://0.zone/plug-in-unit
 
+#####配置参数
 
-org_file='公司目录.xlsx' #公司目录名称
+org_file='公司目录.xlsx'###组织目标内容
 
-save_file="测试文件夹"  #数据存放目录
+save_file="data/测试文件夹"###生成文档保存路径
 
-reda_xlsx_001(org_file,save_file)
+my_0zone_key='14ed9e84812fd8b8a1248bdb18e3008b'####0.zone的APIKEY
+
+automatic_payment="yes" ####api次数不够时自动消费z币，no不消费，yes消费
+
+one_table_file="no" ####yes 整体数据使用一个表格文件，no，每个数据类型使用一个表格文件
+
+reda_xlsx_001(org_file)

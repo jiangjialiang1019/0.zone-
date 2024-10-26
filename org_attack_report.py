@@ -246,6 +246,7 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
     keylist_name=[
         "文档","地址","类型","来源","标签","后缀","原文包含的域名","原文包含的邮箱","原文包含的IP","关键词"
     ]
+    #score>=10
     have_data.append(keylist_name)
     day_30=datetime.datetime.now()-datetime.timedelta(days=30)
     day_30=str(day_30)[0:10]
@@ -290,6 +291,7 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
     ip_lei=0
     query_str=""
     keylist_i=[]
+    ip_list=[]
     for i in ip_list:
         ip_lei=ip_lei+1
         if query_str=="":
@@ -311,7 +313,7 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
             query_str=""
             keylist_i=[]
         
-    if query_str=="":
+    if query_str!="":
         query_str="("+query_str+str(i)+")&&timestamp>="+day_30
         have_data_li=retrieve_data(keylist,query_type,query_str)
         for h in have_data_li:
@@ -327,7 +329,68 @@ def code_s_mapping(company_name,new_file,app_list,domain_list,ip_list):
 
     input_xlsx(have_data,new_file)
     return len(have_data)-1
+
+
+
+#####获取疑似信息系统数据
+def ys_site_s_mapping(company_name,new_file,app_list,domain_list):
+    ctx={
+        "ip_list":[],
+        "num":0
+    }
+    query_type="site"
+    ip_list=[]
+    have_data_duibi=[]
+    have_data=[]
+    keylist=[
+        "url","ip","port","title","company","country","city","os","tags","service","status_code","device_type","explore_timestamp","timestamp"
+    ]
+    keylist_name=[
+        "URL","IP","端口","网页标题","所属公司","国家","城市","操作系统","标签","服务","网络请求状态码","设备类型","发现时间","更新时间","关键词"
+    ]
+    have_data.append(keylist_name)
+
+    for i in company_name:
+        query_str="(company="")&&(html_banner=="+str(i)+"||banner=="+str(i)+")"
+
+        have_data_li=retrieve_data(keylist,query_type,query_str)
+        for h in have_data_li:
+            input_i=h
+            if h not in have_data_duibi:
+                have_data_duibi.append(i)
+                input_i.append(i)
+                if input_i not in have_data:
+                    have_data.append(input_i)
+
+    for i in domain_list:
+        query_str="(company="")&&url_analyzer=="+str(i)
+        
+        have_data_li=retrieve_data(keylist,query_type,query_str)
+        for h in have_data_li:
+            input_i=h
+            if h not in have_data_duibi:
+                have_data_duibi.append(i)
+                input_i.append(i)
+                if input_i not in have_data:
+                    have_data.append(input_i)
+
+    for i in app_list:
+        query_str="(company="")&&(html_banner=="+str(i)+"||banner=="+str(i)+")"
+        have_data_li=retrieve_data(keylist,query_type,query_str)
+        for h in have_data_li:
+            input_i=h
+            if h not in have_data_duibi:
+                have_data_duibi.append(i)
+                input_i.append(i)
+                if input_i not in have_data:
+                    have_data.append(input_i)
+
+    input_xlsx(have_data,new_file)
+    ctx["num"]=len(have_data)-1
+    return ctx
     
+
+
 
 #####获取信息系统数据
 def site_s_mapping(company_name,new_file,app_list,domain_list):
@@ -365,41 +428,6 @@ def site_s_mapping(company_name,new_file,app_list,domain_list):
             if ip_str not in ip_list and len(ip_str)>6:
                 ip_list.append(ip_str)
 
-            if h not in have_data_duibi:
-                have_data_duibi.append(i)
-                input_i.append(i)
-                if input_i not in have_data:
-                    have_data.append(input_i)
-
-    for i in company_name:
-        query_str="html_banner=="+str(i)+"||banner=="+str(i)
-
-        have_data_li=retrieve_data(keylist,query_type,query_str)
-        for h in have_data_li:
-            input_i=h
-            if h not in have_data_duibi:
-                have_data_duibi.append(i)
-                input_i.append(i)
-                if input_i not in have_data:
-                    have_data.append(input_i)
-
-    for i in domain_list:
-        query_str="(company="")&&url_analyzer=="+str(i)
-        
-        have_data_li=retrieve_data(keylist,query_type,query_str)
-        for h in have_data_li:
-            input_i=h
-            if h not in have_data_duibi:
-                have_data_duibi.append(i)
-                input_i.append(i)
-                if input_i not in have_data:
-                    have_data.append(input_i)
-
-    for i in app_list:
-        query_str="(company="")&&(html_banner=="+str(i)+"||banner=="+str(i)+")"
-        have_data_li=retrieve_data(keylist,query_type,query_str)
-        for h in have_data_li:
-            input_i=h
             if h not in have_data_duibi:
                 have_data_duibi.append(i)
                 input_i.append(i)
@@ -576,8 +604,9 @@ def reda_xlsx_001(org_file):
                 old_company_name=i[1]
                 company_name_list=[]
                 company_name_list.append(company_name)
-                if old_company_name!="-" and len(old_company_name)>1:
-                    company_name_list.append(company_name)
+                if old_company_name:
+                    if old_company_name!="-" and len(old_company_name)>1:
+                        company_name_list.append(company_name)
 
 
                 ##记录任务执行情况，可用统计反馈
@@ -609,18 +638,25 @@ def reda_xlsx_001(org_file):
                 worksheet.cell(lei_num+1,7,str(ip_res["num"]))
                 print(company_name,"信息系统",ip_res["num"])
                 workbook.save(filename=org_file)
+
+
+                file_msg={"company":company_name,"data_type":"信息系统（含企业关键词）","which_page":4}
+                ys_ip_res=ys_site_s_mapping(company_name_list,file_msg,app_list,domain_list)
+                worksheet.cell(lei_num+1,10,str(ys_ip_res["num"]))
+                print(company_name,"信息系统（含企业关键词）",ip_res["num"])
+                workbook.save(filename=org_file)
                 
 
-                file_msg={"company":company_name,"data_type":"代码和文档","which_page":4}
+                file_msg={"company":company_name,"data_type":"代码和文档","which_page":5}
                 code_num=code_s_mapping(company_name_list,file_msg,app_list,domain_list,ip_res["ip_list"])
                 worksheet.cell(lei_num+1,8,str(code_num))
                 print(company_name,"代码和文档",code_num)
                 workbook.save(filename=org_file)
                 
-                file_msg={"company":company_name,"data_type":"暗网情报","which_page":5}
-                code_num=darknet_s_mapping(company_name_list,file_msg,app_list,domain_list,ip_res["ip_list"])
-                worksheet.cell(lei_num+1,9,str(code_num))
-                print(company_name,"暗网情报",code_num)
+                # file_msg={"company":company_name,"data_type":"暗网情报","which_page":6}
+                # code_num=darknet_s_mapping(company_name_list,file_msg,app_list,domain_list,ip_res["ip_list"])
+                # worksheet.cell(lei_num+1,9,str(code_num))
+                # print(company_name,"暗网情报",code_num)
 
                 workbook.save(filename=org_file)
                 print("==========================完成一个目标=============================")
@@ -633,9 +669,9 @@ def reda_xlsx_001(org_file):
 #####配置参数
 org_file='公司目录.xlsx'###组织目标内容
 save_file="data/测试文件夹"###生成文档保存路径
-my_0zone_key='14ed9e84812fd8b8a1248bdb18e3008b'####0.zone的APIKEY
+my_0zone_key='93cc7f0cabfc486f9c89ad727ad05714'####0.zone的APIKEY
 automatic_payment="yes" ####api次数不够时自动消费z币，no不消费，yes消费
-one_table_file="no" ####yes 整体数据使用一个表格文件，no，每个数据类型使用一个表格文件
+one_table_file="yes" ####yes 整体数据使用一个表格文件，no，每个数据类型使用一个表格文件
 
 
 reda_xlsx_001(org_file)

@@ -39,7 +39,7 @@
 
 my_0zone_key="d8dc137676xxxxxxe794ef8e17dc8c"
 
-my_0zone_key 异步0.zone获取：https://0.zone/plug-in-unit
+my_0zone_key 移步0.zone获取：https://0.zone/plug-in-unit
 
 #####配置参数
 
